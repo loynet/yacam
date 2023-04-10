@@ -13,6 +13,7 @@ class ModSession(Session):
 
         self.domain = domain
         self.url = f"https://{self.domain}"
+
         self.auth_params = {'username': username, 'password': password}
         self.csrf_token = None
 
@@ -21,7 +22,8 @@ class ModSession(Session):
         self.hooks = {'response': [lambda response, *args, **kwargs: response.raise_for_status()]}
         self.default_timeout = timeout
 
-        self.authenticate_mod()  # tries to authenticate the session
+        # Tries to authenticate the mod.
+        self.authenticate_mod()
 
     # Overwrites request function to add a timeout if not specified
     def request(self, method, url, **kwargs):
@@ -31,7 +33,7 @@ class ModSession(Session):
 
     def authenticate_mod(self) -> None:
         """
-        Authenticates the session as a mod with the given credentials
+        Authenticates the session as a mod with the given credentials.
         :return: None
         :raises: Exception if the authentication request fails
         """
@@ -40,7 +42,7 @@ class ModSession(Session):
 
     def update_csrf(self) -> None:
         """
-        Updates the csrf token
+        Updates the csrf token.
         :return: None
         :raises: Exception if the csrf token is not found in the response or the request fails
         """
@@ -50,11 +52,13 @@ class ModSession(Session):
             raise Exception('Unable to update csrf token')
         self.csrf_token = res['token']
 
-    def delete_post(self, board, post_id, reason='') -> (int, dict):
+    def delete_post(self, board, post_id, hide_username=True, reason='') -> (int, dict):
         """
-        Deletes a post
+        Deletes a post.
+        The log message is always prefixed with 'yacam' to make it easier to filter.
         :param board: The board where the post is located
         :param post_id: The id of the post to delete
+        :param hide_username: (optional) Whether to hide the moderator name
         :param reason: (optional) The reason for the deletion
         :return: The status code and the response body
         """
@@ -64,6 +68,9 @@ class ModSession(Session):
             'delete': '1',
             'log_message': f'yacam' if reason == '' else f'yacam: {reason}'
         }
+
+        if hide_username:
+            body['hide_name'] = '1'
 
         res = self.post(
             url=f'{self.url}/forms/board/{board}/modactions',

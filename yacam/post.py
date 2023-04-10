@@ -1,29 +1,39 @@
 from datetime import datetime
 
 
-class Country:
+class Flag:
+    """
+    Represents a flag, it may be a geographic flag or a custom one. It contains the name of the flag and the
+    code of the flag.
+    """
+
     def __init__(self, name: str, code: str, is_custom: bool = False):
         self.name = name
         self.code = code
         self.is_custom = is_custom
 
     @classmethod
-    def from_raw(cls, country: dict):
+    def from_raw(cls, flag: dict):
         return cls(
-            name=country["name"],
-            code=country["code"],
-            is_custom=country.get("custom", False)
+            name=flag["name"],
+            code=flag["code"],
+            is_custom=flag.get("custom", False)
         )
 
 
 class Author:
+    """
+    Represents an author of a post, most of the time an anon, but the author
+    can have a name, a tripcode, a capcode, an email and a flag.
+    """
+
     def __init__(self, name: str, tripcode: str = "", capcode: str = "", email: str = "",
-                 country: Country = None):
+                 flag: Flag = None):
         self.name = name
         self.tripcode = tripcode
         self.capcode = capcode
         self.email = email
-        self.country = country
+        self.flag = flag
 
     @classmethod
     def from_raw(cls, post: dict):
@@ -32,11 +42,17 @@ class Author:
             tripcode=post.get("tripcode", ""),
             capcode=post.get("capcode", ""),
             email=post.get("email", ""),
-            country=Country.from_raw(post["country"]) if post["country"] else None,
+            flag=Flag.from_raw(post["country"]) if post["country"] else None,
         )
 
 
 class File:
+    """
+    Represents a file attached to a post. It contains the filename, the original filename, the hash, the extension, the
+    mime type, the size, the width and the height of the image. It also contains a boolean to know if the file is a
+    spoiler.
+    """
+
     def __init__(self, filename: str, original_filename: str, content_hash: str, extension: str, mime_type: str,
                  size: int, width: int, height: int, is_spoiler: bool = False):
         self.filename = filename
@@ -90,25 +106,45 @@ class Post:
             files=[File.from_raw(file) for file in post.get("files", [])],
         )
 
-    def has_capcode(self):
+    def has_capcode(self) -> bool:
+        """
+        Indicates if the post has a capcode.
+        :return: True if the post has a capcode, False otherwise
+        """
         # For some reason capcode is None in boards (e.g. None if empty in /b/ but not in global management)
         if self.author.capcode is None:
             return False
         return self.author.capcode != ""
 
-    def has_files(self):
+    def has_files(self) -> bool:
+        """
+        Indicates if the post has files.
+        :return: True if the post has files, False otherwise
+        """
         return len(self.files) > 0
 
-    def is_from_country(self, codes: list[str]):
-        return self.author.country is not None and not self.author.country.is_custom and self.author.country.code in codes
+    def has_geo_flag(self) -> bool:
+        """
+        Indicates if the post has a geographic flag.
+        :return: True if the post has a geographic flag, False otherwise
+        """
+        return self.author.flag is not None and not self.author.flag.is_custom
 
-    def url(self):
+    def get_url(self) -> str:
+        """
+        Returns the URL of the post.
+        :return: The relative URL of the post
+        """
         thread_url = f"{self.board}/thread/{self.thread_id}.html"
         if self.is_thread:
             return thread_url
         return f"{thread_url}#{self.post_id}"
 
-    def manage_url(self):
+    def get_manage_url(self) -> str:
+        """
+        Returns the URL of the post in the management view.
+        :return: The relative URL of the post in the management view
+        """
         thread_url = f"{self.board}/manage/thread/{self.thread_id}"
         if self.is_thread:
             return thread_url

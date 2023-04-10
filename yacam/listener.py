@@ -14,16 +14,18 @@ BAD_SYMBOLS = ['*', '&', '%', '$', '#', '@', '!', '?', '(', ')', '[', ']', '{', 
 THRESHOLD = 0.25
 WHITELISTED_COUNTRIES = []
 
+logger = logging.getLogger(__name__)
+
 
 class Listener(ABC, Thread):
     def __init__(self, session):
         Thread.__init__(self)
         self.daemon = True
-        self._stop = Event()  # _stop is reserved
+        self._stop = Event()
         self.session = session
 
     def stop(self):
-        logging.debug(f'Killing listener, goodbye')
+        logger.debug(f'Killing listener, goodbye')
         self._stop.set()
 
 
@@ -34,20 +36,19 @@ class PostsListener(Listener):
         self.good_countries = WHITELISTED_COUNTRIES
         self.bad_symbols = re.compile("[" + "".join([re.escape(e) for e in BAD_SYMBOLS]) + "]", re.IGNORECASE)
 
-        self.session = session
         self.extractor = URLExtract()
 
         client = socketio.Client(http_session=self.session)
 
         @client.event
         def connect():
-            logging.info(f'Connected to {self.session.domain} websocket')
+            logger.info(f'Connected to {self.session.domain} websocket')
             # TODO remove the hardcoded room
             client.emit('room', 'cc99-manage-recent-hashed')
 
         @client.event
         def disconnect():
-            logging.info(f'Disconnected from {self.session.domain} websocket')
+            logger.info(f'Disconnected from {self.session.domain} websocket')
 
         @client.on('newPost')
         def on_new_post(data):
@@ -57,15 +58,16 @@ class PostsListener(Listener):
         self.run()
 
     def handle_bad_post(self, post: Post) -> None:
-        logging.info(f'Found bad post: {post.url()}, {post.message}, deleting...')
+        logger.info(f'Found bad post: {post.get_url()}, {post.message}, deleting...')
         # Tom updates every action and he knows better
         self.session.update_csrf()
         self.session.delete_post(post.board, post.post_id, reason='bad post')
 
     def handle_new_post(self, post: Post) -> None:
-        logging.debug(f'New post: {post.url()}, {post.message}')
+        logger.debug(f'New post: {post.get_url()}, {post.message}')
         # Whitelist posts without files, posts from authenticated authors and posts from safe countries
-        if not post.has_files() or post.has_capcode() or post.is_from_country(list(self.good_countries)):
+        if not post.has_files() or post.has_capcode() or \
+                (post.has_geo_flag() and post.author.flag.code in self.good_countries):
             return
 
         # TODO implement new algorithm for detecting bad posts
@@ -77,7 +79,7 @@ class PostsListener(Listener):
         if len(urls) == 0:
             return
 
-        # Remove urls and
+        # Remove detected urls
         for url in urls:
             msg = msg[:url[1][0]] + msg[url[1][1]:]
 
@@ -90,5 +92,5 @@ class PostsListener(Listener):
         self.client.wait()  # Blocks the thread until the connection is closed
 
         if self._stop.wait():
-            logging.info("Exiting recent watcher")
+            logger.info("Exiting recent watcher")
             self.client.disconnect()
