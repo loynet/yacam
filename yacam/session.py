@@ -66,7 +66,7 @@ class ModSession(Session):
             'checkedposts': post_id,
             '_csrf': self.csrf_token,
             'delete': '1',
-            'log_message': f'yacam' if reason == '' else f'yacam: {reason}'
+            'log_message': reason
         }
 
         if hide_username:
