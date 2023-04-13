@@ -50,10 +50,17 @@ class PostsListener(StoppableThread):
             # Sets the eval function to the eval_entries function
             self.eval = self.eval_entries
 
-        self.countries_whitelist = config_parser.get('moderation', 'countries_whitelist', fallback="").split()
-        self.reason = config_parser.get('moderation', 'reason', fallback="")
+        self.countries_whitelist = config_parser.get('moderation', 'countries_whitelist', fallback='').split()
 
         self.session = session
+
+        # TODO: add find a better way to handle this
+        self.log_message = config_parser.get('moderation', 'log_message', fallback='')
+        self.ban_author = config_parser['moderation']['action'] == "ban"
+        if self.ban_author:
+            self.ban_duration = config_parser.get('moderation', 'ban_duration', fallback='1y')
+            self.ban_reason = config_parser.get('moderation', 'ban_reason', fallback='')
+
         self.extractor = URLExtract()
         client = socketio.Client(http_session=self.session)
 
@@ -89,7 +96,13 @@ class PostsListener(StoppableThread):
             f'Found bad post:\n{post.get_url()}\n{" ,".join(file.content_hash for file in post.files)}\n{post.message}')
         # Tom updates every action and he knows better
         self.session.update_csrf()
-        self.session.delete_post(post.board, post.post_id, reason=self.reason)
+
+        # TODO find better way of handling this, looks bad af
+        if self.ban_author:
+            self.session.delete_ban(post.board, post.post_id, ban_reason=self.ban_reason,
+                                    ban_duration=self.ban_duration, log_message=self.log_message)
+        else:
+            self.session.delete_post(post.board, post.post_id, log_message=self.log_message)
 
     def handle_new_post(self, post: Post) -> None:
         logger.debug(f'New post: {post.get_url()}, {post.message}')
