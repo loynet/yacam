@@ -1,9 +1,10 @@
-import logging
-
-import requests
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from requests.sessions import merge_setting
+from requests.structures import CaseInsensitiveDict
+
+import basedflare
 
 
 class ModSession(Session):
@@ -19,17 +20,43 @@ class ModSession(Session):
 
         # Overwrites session default behaviour
         self.mount(self.url, HTTPAdapter(max_retries=Retry(total=retries, backoff_factor=backoff_factor)))
-        self.hooks = {'response': [lambda response, *args, **kwargs: response.raise_for_status()]}
-        self.default_timeout = timeout
 
-        # Tries to authenticate the mod.
+        self.default_timeout = timeout
+        # TODO make user-agent configurable
+        self.headers = merge_setting(self.headers,
+                                     {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 '
+                                                    'Firefox/102.0'}, dict_class=CaseInsensitiveDict)
+
+        # Tries to authenticate the mod
         self.authenticate_mod()
 
     # Overwrites request function to add a timeout if not specified
     def request(self, method, url, **kwargs):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.default_timeout
-        return super().request(method, url, **kwargs)
+
+        """
+        if 'headers' not in kwargs:
+            kwargs['headers'] = {}
+        for key, value in self.headers.items():
+            if key not in kwargs['headers']:
+                kwargs['headers'][key] = value
+        """
+
+        res = super().request(method, url, **kwargs)
+
+        if res.status_code == 403 and 'login.html?goto=' in res.url:
+            self.authenticate_mod()
+            res = super().request(method, url, **kwargs)
+
+        elif res.status_code == 403 and '.basedflare/bot-check' in res.url:
+            self.send(basedflare.bot_check(self.domain))
+            res = super().request(method, url, **kwargs)
+
+        else:
+            res.raise_for_status()
+
+        return res
 
     def authenticate_mod(self) -> None:
         """

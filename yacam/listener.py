@@ -67,7 +67,7 @@ class PostsListener(StoppableThread):
         @client.event
         def connect():
             logger.info(f'Connected to {self.session.domain} websocket')
-            client.emit('room', 'cc99-manage-recent-hashed')
+            client.emit('room', 'globalmanage-recent-hashed')
 
         @client.event
         def disconnect():
