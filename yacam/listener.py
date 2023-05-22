@@ -111,8 +111,12 @@ class PostsListener(StoppableThread):
                 (post.has_geo_flag() and post.author.flag.code in self.countries_whitelist):
             return
 
-        # Check for urls
         msg = post.message
+        # No message = no problem
+        if msg is None:
+            return
+
+        # Check for urls
         urls = self.extractor.find_urls(msg, get_indices=True)
         # No urls = no problem
         if len(urls) == 0:
