@@ -94,8 +94,6 @@ class PostsListener(StoppableThread):
 
         logger.info(
             f'Found bad post:\n{post.get_url()}\n{" ,".join(file.content_hash for file in post.files)}\n{post.message}')
-        # Tom updates every action and he knows better
-        self.session.update_csrf()
 
         # TODO find better way of handling this, looks bad af
         if self.ban_author:
