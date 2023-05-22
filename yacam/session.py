@@ -105,7 +105,7 @@ class ModSession(Session):
         :param board: The board where the post is located
         :param post_id: The id of the post to delete
         :param hide_username: (optional) Whether to hide the moderator name
-        :param log_message: (optional) The reason for the deletion (will be publicly visible)
+        :param log_message: (optional) The reason for the deletion (publicly visible)
         :return: The status code and the response body
         """
         body = {
