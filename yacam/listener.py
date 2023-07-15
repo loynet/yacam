@@ -40,7 +40,7 @@ class PostsListener(StoppableThread):
             self.eval_post = self.eval_threshold
         elif mode == 'entries':
             # Compiles the regex for the entry and group of entries
-            e = r'\w' + tokens
+            e = r'[^\W_]' + tokens
             self.entry_pattern = re.compile(e, re.IGNORECASE)
             self.entries_pattern = re.compile(f'(?:{e})+', re.IGNORECASE)
             # Sets the max number of consecutive entries
