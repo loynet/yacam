@@ -9,6 +9,9 @@ env/
 # Configuration files
 .env
 
+# Dump files
+*.json
+
 # IDE files
 .idea/
 

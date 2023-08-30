@@ -1,4 +1,5 @@
 import configparser
+import json
 import logging
 import re
 from abc import ABC
@@ -79,7 +80,20 @@ class PostsListener(StoppableThread):
 
         @client.on('newPost')
         def on_new_post(data):
-            self.handle_new_post(Post.from_raw(data))
+            if self.handle_new_post(Post.from_raw(data)):
+                # TODO: this is a very "hackish" way to do this, but it works for now, fix it later
+                # Redact urls from the message
+                urls = self.extractor.find_urls(data['nomarkup'])
+                for url in urls:
+                    u = url.split('/')
+                    # If the url has no path we must delete the whole domain (in every entry)
+                    safe_url = f'{u[0]}/REDACTED' if len(u) > 1 else f'REDACTED.TLD'
+                    data['nomarkup'] = data['nomarkup'].replace(url, safe_url)
+                    data['message'] = data['message'].replace(url, safe_url)
+
+                # Dump the data to a json file
+                with open(f'{data["_id"]}.json', 'w') as f:
+                    f.write(json.dumps(data))
 
         self.client = client
         self.run()
@@ -98,23 +112,23 @@ class PostsListener(StoppableThread):
             f'Found bad post:\n{post.get_url()}\n{" ,".join(file.content_hash for file in post.files)}\n{post.message}')
         self.mod_action(post)
 
-    def handle_new_post(self, post: Post) -> None:
+    def handle_new_post(self, post: Post) -> bool:
         logger.debug(f'New post: {post.get_url()}, {post.message}')
         # Whitelist posts without files, posts from authenticated authors and posts from safe countries
         if not post.has_files() or post.has_capcode() or \
                 (post.has_geo_flag() and post.author.flag.code in self.countries_whitelist):
-            return
+            return False
 
         msg = post.message
         # No message = no problem
         if msg is None:
-            return
+            return False
 
         # Check for urls
         urls = self.extractor.find_urls(msg, get_indices=True)
         # No urls = no problem
         if len(urls) == 0:
-            return
+            return False
 
         # Remove detected urls
         for url in urls:
@@ -123,6 +137,7 @@ class PostsListener(StoppableThread):
         # Calculate the obfuscating ratio and compare it to the threshold
         if self.eval_post(msg):
             self.handle_bad_post(post)
+            return True
 
     def run(self):
         self.client.connect(f'wss://{self.session.domain}/', transports=['websocket'])
