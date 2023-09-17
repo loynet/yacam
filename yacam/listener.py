@@ -61,7 +61,7 @@ class PostsListener(StoppableThread):
                                                                    ban_duration=duration, log_message=log_message)
 
         # Read the whitelist configs
-        self.countries_whitelist = config_parser.get('moderation', 'countries_whitelist', fallback='').split()
+        self.countries_whitelist = config_parser.get('detection', 'countries_whitelist', fallback='').split()
 
         self.session = session
         self.extractor = URLExtract()
