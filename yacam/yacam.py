@@ -36,10 +36,10 @@ class Yacam:
         self.config_parser.read('config.ini')
 
         self.session = ModSession(domain, username, password)
-        logger.info('Yacam initialized')
+        logger.info('Initialized')
 
     def run(self) -> None:
-        logger.info('Yacam is running!')
+        logger.info('Running!')
         listener = PostsListener(self.session, self.config_parser)
         listener.join()
 

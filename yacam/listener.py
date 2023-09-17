@@ -14,6 +14,7 @@ from session import ModSession
 logger = logging.getLogger(__name__)
 
 
+# TODO this stopple thread thing is even doing something? Check it later
 class StoppableThread(ABC, Thread):
     def __init__(self):
         Thread.__init__(self)
@@ -32,22 +33,23 @@ class PostsListener(StoppableThread):
         # Read the detection configs
         tokens = "[" + "".join([re.escape(e) for e in config_parser['detection']['tokens'].split()]) + "]"
         mode = config_parser['detection']['mode']
+
         if mode == 'threshold':
-            # Compiles the regex for the obfuscated tokens
             self.tokens_pattern = re.compile(tokens, re.IGNORECASE)
-            # Sets the max threshold
             self.max_threshold = config_parser['detection'].getfloat('max_threshold')
-            # Sets the eval function to the eval_threshold function
             self.eval_post = self.eval_threshold
+
         elif mode == 'entries':
             # Compiles the regex for the entry and group of entries
             e = r'[^\W_]' + tokens
             self.entry_pattern = re.compile(e, re.IGNORECASE)
             self.entries_pattern = re.compile(f'(?:{e})+', re.IGNORECASE)
-            # Sets the max number of consecutive entries
+
             self.max_entries = config_parser['detection'].getint('max_consecutive_entries')
-            # Sets the eval function to the eval_entries function
             self.eval_post = self.eval_entries
+
+        # Read the whitelist configs
+        self.countries_whitelist = config_parser.get('detection', 'countries_whitelist', fallback='').split()
 
         # Read the moderation action configs
         log_message = config_parser.get('moderation', 'log_message', fallback='')
@@ -60,13 +62,9 @@ class PostsListener(StoppableThread):
             self.mod_action = lambda post: self.session.delete_ban(post.board, post.post_id, ban_reason=reason,
                                                                    ban_duration=duration, log_message=log_message)
 
-        # Read the whitelist configs
-        self.countries_whitelist = config_parser.get('detection', 'countries_whitelist', fallback='').split()
-
         self.session = session
         self.extractor = URLExtract()
 
-        # Configure the socketio client
         client = socketio.Client(http_session=self.session)
 
         @client.event
@@ -86,7 +84,7 @@ class PostsListener(StoppableThread):
                 urls = self.extractor.find_urls(data['nomarkup'])
                 for url in urls:
                     u = url.split('/')
-                    # If the url has no path we must delete the whole domain (in every entry)
+                    # If the url has no path, we must delete the whole domain (in every entry)
                     safe_url = f'{u[0]}/REDACTED' if len(u) > 1 else f'REDACTED.TLD'
                     data['nomarkup'] = data['nomarkup'].replace(url, safe_url)
                     data['message'] = data['message'].replace(url, safe_url)

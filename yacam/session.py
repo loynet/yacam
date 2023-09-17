@@ -7,8 +7,6 @@ from requests.packages.urllib3.util.retry import Retry
 from requests.sessions import merge_setting
 from requests.structures import CaseInsensitiveDict
 
-import basedflare
-
 logger = logging.getLogger(__name__)
 
 
@@ -55,12 +53,6 @@ class ModSession(Session):
             kwargs['TTL'] = 3 if 'TTL' not in kwargs else kwargs['TTL'] - 1
             self.__login()
             res = self.request(method, url, **kwargs)
-
-        elif res.status_code == 403 and '.basedflare/bot-check' in res.url:
-            # Make sure we don't get stuck in a loop
-            kwargs['TTL'] = 3 if 'TTL' not in kwargs else kwargs['TTL'] - 1
-            self.send(basedflare.bot_check(self.domain))
-            res = super().request(method, url, **kwargs)
 
         else:
             res.raise_for_status()
