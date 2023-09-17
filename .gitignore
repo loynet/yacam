@@ -8,7 +8,7 @@ env/
 
 # Configuration files
 .env
-config.init
+config.ini
 
 # Dump files
 *.json

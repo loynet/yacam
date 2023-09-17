@@ -1,6 +1,6 @@
 # YACAM
 
-A bot that tries to detect (dumb) spam on jschan imageboards and does something about them.
+A bot that tries to detect (dumb) spam on [jschan](https://gitgud.io/fatchan/jschan) imageboards and does something about them.
 
 Consider that, because of how it works, both false positives and false negatives are a possibility.
 If a user posts like a spammer (for instance, writes likes `l*i*k*e t*h*i*s` while sharing URLs, etc.), will be
