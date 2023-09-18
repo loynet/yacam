@@ -62,14 +62,14 @@ you will need to provide the bot with credentials for an account with global sta
 supported).
 Ideally, the account must be a global moderator since, as far as I know, no other type of account was tested.
 
-1) (Optional) Create and activate a new [virtual environment](https://docs.python.org/3/library/venv.html) by
+1. (Optional) Create and activate a new [virtual environment](https://docs.python.org/3/library/venv.html) by
    running `python -m venv path/to/venv` and `source path/to/venv/bin/activate` respectively
-2) Use `pip install -r requirements.txt` to install the dependencies
-3) Copy, update, and rename `.env.example` to `.env`
-4) Copy, tweak, and rename `example.ini` to `config.ini`
+2. Use `pip install -r requirements.txt` to install the dependencies
+3. Copy, update, and rename `.env.example` to `.env`
+4. Copy, tweak, and rename `example.ini` to `config.ini`
 
 ## Running
 
-1) (Optional) Activate the virtual environment with `source path/to/venv/bin/activate`
-2) Run `python yacam/yacam.py` to start the bot
+1. (Optional) Activate the virtual environment with `source path/to/venv/bin/activate`
+2. Run `python yacam/yacam.py` to start the bot
 
