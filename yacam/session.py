@@ -127,6 +127,7 @@ class ModSession(Session):
             'checkedposts': post_id,
             'delete': '1',
             'global_ban': '1',
+            'ban_h': '1',
             'ban_reason': ban_reason,
             'ban_duration': ban_duration,
             'log_message': log_message

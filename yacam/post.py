@@ -67,6 +67,7 @@ class File:
 
     @classmethod
     def from_raw(cls, file: dict):
+        geometry = file.get("geometry", None)
         return cls(
             filename=file["filename"],
             original_filename=file["originalFilename"],
@@ -74,8 +75,8 @@ class File:
             extension=file["extension"],
             mime_type=file["mimetype"],
             size=file["size"],
-            width=file["geometry"]["width"],
-            height=file["geometry"]["height"],
+            width=geometry["width"] if geometry and "width" in geometry else -1,
+            height=geometry["height"] if geometry and "height" in geometry else -1,
             is_spoiler=file.get("spoiler", False)
         )
 
@@ -96,7 +97,8 @@ class Post:
     @classmethod
     def from_raw(cls, post: dict):
         return cls(
-            timestamp=datetime.fromisoformat(post["date"][:-1]),  # Drops the Z
+            # timestamp=datetime.fromisoformat(post["date"][:-1]),  # Drops the Z
+            timestamp=datetime.strptime(post["date"], '%Y-%m-%dT%H:%M:%S.%fZ'),
             board=post["board"],
             post_id=post["postId"],
             message=post["nomarkup"],

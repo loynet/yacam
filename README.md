@@ -48,7 +48,7 @@ If the count surpasses a configurable amount, the post is considered spam.
 ---
 
 Finally, if a post is considered spam, the configured moderation action is performed and the post is saved as a
-json with all the URLs redacted (currently experimental and not properly tested).
+json (currently experimental and not properly tested).
 
 As expected, the moderation action is performed by the account configured in the `.env` file and the username is hidden
 by default.
