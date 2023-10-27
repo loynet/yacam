@@ -1,5 +1,6 @@
 import atexit
 import logging
+import time
 
 from session import ModSession
 import socketio
@@ -17,6 +18,7 @@ class PostListener:
         @self.io.event
         def connect():
             self.io.emit('room', 'globalmanage-recent-hashed')
+            logger.info(f'Connected to {self.session.domain}')
 
         @self.io.on('newPost')
         def new_post(data):
@@ -30,7 +32,9 @@ class PostListener:
         ))
 
     def run(self):
-        self.io.connect(f'wss://{self.session.domain}/', transports=['websocket'])
-        logger.info("Connected")
-        # Blocks until the connection is stopped
-        self.io.wait()
+        while True:  # Basically try forever
+            self.io.connect(f'wss://{self.session.domain}/', transports=['websocket'])
+            # Blocks until the connection is stopped
+            self.io.wait()
+
+            time.sleep(30)
