@@ -16,9 +16,13 @@ class StringEval(ABC):
 
 class Threshold(StringEval):
     def __init__(self, config: ConfigParser):
-        tokens = "[" + "".join([re.escape(e) for e in config['detection']['tokens'].split()]) + "]"
+        tokens = (
+            "["
+            + "".join([re.escape(e) for e in config["detection"]["tokens"].split()])
+            + "]"
+        )
         self.pattern = re.compile(tokens, re.IGNORECASE)
-        self.max = config['detection'].getfloat('max_threshold')
+        self.max = config["detection"].getfloat("max_threshold")
 
     def is_spam(self, s: str) -> bool:
         return len(s) > 0 and (len(re.findall(self.pattern, s)) / len(s)) > self.max
@@ -26,33 +30,46 @@ class Threshold(StringEval):
 
 class Counter(StringEval):
     def __init__(self, config: ConfigParser):
-        tokens = "[" + "".join([re.escape(e) for e in config['detection']['tokens'].split()]) + "]"
+        tokens = (
+            "["
+            + "".join([re.escape(e) for e in config["detection"]["tokens"].split()])
+            + "]"
+        )
         # Compiles the regex for the entry and group of entries
-        e = r'[^\W_]' + tokens
+        e = r"[^\W_]" + tokens
         self.entry_pattern = re.compile(e, re.IGNORECASE)
-        self.pattern = re.compile(f'(?:{e})+', re.IGNORECASE)
+        self.pattern = re.compile(f"(?:{e})+", re.IGNORECASE)
 
-        self.max = config['detection'].getint('max_consecutive_entries')
+        self.max = config["detection"].getint("max_consecutive_entries")
 
     def is_spam(self, s: str) -> bool:
         for found in re.finditer(self.pattern, s):
-            if len(re.findall(self.entry_pattern, found.string[found.start():found.end()])) > self.max:
+            if (
+                len(
+                    re.findall(
+                        self.entry_pattern, found.string[found.start() : found.end()]
+                    )
+                )
+                > self.max
+            ):
                 return True
         return False
 
 
 class PostEval:
     def __init__(self, config: ConfigParser):
-        mode = config['detection']['mode']
-        if mode == 'threshold':
+        mode = config["detection"]["mode"]
+        if mode == "threshold":
             self.str_eval: StringEval = Threshold(config)
-        elif mode == 'entries':
+        elif mode == "entries":
             self.str_eval: StringEval = Counter(config)
         else:
             raise ValueError('detection mode must be "threshold" or "entries"')
 
         # Read the whitelist configs, it is optional
-        self.whitelist: list[str] = config.get('detection', 'countries_whitelist', fallback='').split()
+        self.whitelist: list[str] = config.get(
+            "detection", "countries_whitelist", fallback=""
+        ).split()
 
         self.url_extr: URLExtract = URLExtract()
 
@@ -80,6 +97,6 @@ class PostEval:
 
         # Remove found urls
         for url in urls:
-            msg = msg[:url[1][0]] + msg[url[1][1]:]
+            msg = msg[: url[1][0]] + msg[url[1][1] :]
 
         return self.str_eval.is_spam(msg)

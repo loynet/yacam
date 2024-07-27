@@ -76,8 +76,8 @@ class Yacam:
                 f.write(json.dumps(event[1]))
 
     def run(self) -> None:
-        logger.info('Running')
-        print('Press CTRL+C to exit')
+        logger.info("Running")
+        print("Press CTRL+C to exit")
         self.moderator.listen([self.on_new_post])
 
 

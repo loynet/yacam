@@ -15,9 +15,7 @@ class Flag:
     @classmethod
     def from_raw(cls, flag: dict):
         return cls(
-            name=flag["name"],
-            code=flag["code"],
-            is_custom=flag.get("custom", False)
+            name=flag["name"], code=flag["code"], is_custom=flag.get("custom", False)
         )
 
 
@@ -27,8 +25,14 @@ class Author:
     can have a name, a tripcode, a capcode, an email and a flag.
     """
 
-    def __init__(self, name: str, tripcode: str = "", capcode: str = "", email: str = "",
-                 flag: Flag = None):
+    def __init__(
+        self,
+        name: str,
+        tripcode: str = "",
+        capcode: str = "",
+        email: str = "",
+        flag: Flag = None,
+    ):
         self.name = name
         self.tripcode = tripcode
         self.capcode = capcode
@@ -53,8 +57,18 @@ class File:
     spoiler.
     """
 
-    def __init__(self, filename: str, original_filename: str, content_hash: str, extension: str, mime_type: str,
-                 size: int, width: int, height: int, is_spoiler: bool = False):
+    def __init__(
+        self,
+        filename: str,
+        original_filename: str,
+        content_hash: str,
+        extension: str,
+        mime_type: str,
+        size: int,
+        width: int,
+        height: int,
+        is_spoiler: bool = False,
+    ):
         self.filename = filename
         self.original_filename = original_filename
         self.content_hash = content_hash
@@ -77,13 +91,22 @@ class File:
             size=file["size"],
             width=geometry["width"] if geometry and "width" in geometry else -1,
             height=geometry["height"] if geometry and "height" in geometry else -1,
-            is_spoiler=file.get("spoiler", False)
+            is_spoiler=file.get("spoiler", False),
         )
 
 
 class Post:
-    def __init__(self, timestamp: datetime, board: str, post_id: str, message: str,
-                 author: Author, thread: str = "", subject: str = "", files: list[File] = None):
+    def __init__(
+        self,
+        timestamp: datetime,
+        board: str,
+        post_id: str,
+        message: str,
+        author: Author,
+        thread: str = "",
+        subject: str = "",
+        files: list[File] = None,
+    ):
         self.timestamp = timestamp
         self.board = board
         self.post_id = post_id
@@ -98,7 +121,7 @@ class Post:
     def from_raw(cls, post: dict):
         return cls(
             # timestamp=datetime.fromisoformat(post["date"][:-1]),  # Drops the Z
-            timestamp=datetime.strptime(post["date"], '%Y-%m-%dT%H:%M:%S.%fZ'),
+            timestamp=datetime.strptime(post["date"], "%Y-%m-%dT%H:%M:%S.%fZ"),
             board=post["board"],
             post_id=post["postId"],
             message=post["nomarkup"],
