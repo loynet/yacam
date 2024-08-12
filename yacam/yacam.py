@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import sys
+import time
+from datetime import datetime
 
 from basedflare_session import BasedSession
 from dotenv import load_dotenv
@@ -15,7 +17,7 @@ from post import Post
 # Configure logger
 logging.basicConfig(
     format="%(filename)s %(asctime)s %(levelname)-8s %(message)s",
-    level=logging.INFO,
+    level=logging.DEBUG,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
@@ -66,8 +68,6 @@ class Yacam:
         logger.info("Initialized")
 
     def on_new_post(self, event: list) -> None:
-        if event[0] != "newPost":
-            return
         post = Post.from_raw(event[1])
         if self.eval.is_spam(post):
             logger.info("Found spam")
@@ -78,7 +78,23 @@ class Yacam:
     def run(self) -> None:
         logger.info("Running")
         print("Press CTRL+C to exit")
-        self.moderator.listen([self.on_new_post])
+
+        delay, max_delay = 5, 60 * 30  # seconds
+        last_exception = datetime.now()
+        while True:
+            try:
+                time.sleep(delay)
+                self.moderator.login()  # Login every time to avoid session expiration issues (not ideal)
+                self.moderator.listen(self.on_new_post)
+            except Exception as e:
+                logger.exception(e)
+                # Regenerate the delay if the last exception was more than max_delay and a threshold of 5 minutes has passed
+                curr_time = datetime.now()
+                if (curr_time - last_exception).total_seconds() > max_delay + (60 * 5):
+                    delay = 5
+                last_exception = curr_time
+                delay = min(delay * 2, max_delay)
+                logger.error(f"Error {e}, trying again in {delay} seconds")
 
 
 if __name__ == "__main__":

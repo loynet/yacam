@@ -1,4 +1,3 @@
-import atexit
 import logging
 
 import socketio
@@ -69,12 +68,6 @@ class Moderator:
             "password": password,
         }
         self.url = url
-        self.__sio = None
-
-        self.login()
-        atexit.register(
-            lambda: (self.logout(), self.__sio.disconnect() if self.__sio else None)
-        )
 
     def login(self):
         res = self.session.post(
@@ -115,25 +108,6 @@ class Moderator:
 
         return res.status_code, res.json()
 
-    def listen(self, callbacks: callable):
-        if not self.__sio:  # Lazily create it but keep it a singleton
-            self.__sio = socketio.SimpleClient(http_session=self.session)
-
-        self.__sio.connect(
-            self.url,
-            headers={"User-Agent": self.session.headers["User-Agent"]},
-            transports=["websocket"],
-        )
-
-        # Join the global management room, which is the global mod (or sysop in ptchan) feed;
-        # Not sure about the other rooms, but it can probably be changed easily by changing the string
-        self.__sio.emit("room", "globalmanage-recent-hashed")
-
-        while True:
-            received = self.__sio.receive()
-            for c in callbacks:
-                c(received)
-
     def __get_csrf_token(self):
         res = self.session.get(
             url=f"{self.url}/csrf.json",
@@ -141,3 +115,33 @@ class Moderator:
         )
         res.raise_for_status()
         return res.json()["token"]
+
+    def listen(self, callback: callable):
+        sio = socketio.Client(http_session=self.session)
+
+        @sio.event
+        def connect():
+            sio.emit("room", "globalmanage-recent-hashed")
+
+        @sio.on("newPost")
+        def new_post(*data):
+            callback(data)
+
+        sio.connect(
+            self.url,
+            headers={"User-Agent": self.session.headers["User-Agent"]},
+            transports=["websocket"],
+        )
+        logger.info("Listener connected")
+
+        tries = 3
+        while True:
+            try:
+                sio.sleep(5)
+                sio.call("ping", timeout=5)
+                tries = 3
+            except:
+                tries -= 1
+                if tries == 0:
+                    sio.shutdown()
+                    raise Exception("Socket client failed to ping the server")
