@@ -17,7 +17,7 @@ from post import Post
 # Configure logger
 logging.basicConfig(
     format="%(filename)s %(asctime)s %(levelname)-8s %(message)s",
-    level=logging.DEBUG,
+    level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
@@ -67,13 +67,13 @@ class Yacam:
         self.eval = PostEval(config)
         logger.info("Initialized")
 
-    def on_new_post(self, event: list) -> None:
-        post = Post.from_raw(event[1])
+    def on_new_post(self, data: list) -> None:
+        post = Post.from_raw(data[0])
         if self.eval.is_spam(post):
             logger.info("Found spam")
             self.action(post)
-            with open(f'{event[1]["_id"]}.json', "w") as f:
-                f.write(json.dumps(event[1]))
+            with open(f'{data[0]["_id"]}.json', "w") as f:
+                f.write(json.dumps(data[0]))
 
     def run(self) -> None:
         logger.info("Running")

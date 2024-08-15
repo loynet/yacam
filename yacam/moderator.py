@@ -137,7 +137,7 @@ class Moderator:
         tries = 3
         while True:
             try:
-                sio.sleep(5)
+                sio.sleep(10)
                 sio.call("ping", timeout=5)
                 tries = 3
             except:
