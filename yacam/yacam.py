@@ -55,13 +55,22 @@ class Yacam:
         self.moderator = new_moderator(session)
 
         action_type = config.get("moderation", "action")
+        log_message = config.get("moderation", "log_message", fallback="")
         if action_type == "delete":
             self.action = lambda post: self.moderator.do(
-                post.board, delete(post.post_id)
+                post.board, delete(post.post_id, log_message=log_message)
             )
         else:
+            ban_reason = config.get("moderation", "ban_reason", fallback="")
+            ban_duration = config.get("moderation", "ban_duration", fallback="1y")
             self.action = lambda post: self.moderator.do(
-                post.board, delete_and_ban(post.post_id)
+                post.board,
+                delete_and_ban(
+                    post.post_id,
+                    log_message=log_message,
+                    ban_reason=ban_reason,
+                    ban_duration=ban_duration,
+                ),
             )
 
         self.eval = PostEval(config)
