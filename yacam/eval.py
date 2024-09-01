@@ -90,13 +90,9 @@ class PostEval:
 
         # Check for urls
         msg = p.message
-        urls = self.url_extr.find_urls(msg, get_indices=True)
+        urls = self.url_extr.find_urls(msg)
         # No urls = no problem
         if len(urls) == 0:
             return False
 
-        # Remove found urls
-        for url in urls:
-            msg = msg[: url[1][0]] + msg[url[1][1] :]
-
-        return self.str_eval.is_spam(msg)
+        return self.str_eval.is_spam("".join(msg.replace(url, "") for url in urls))
