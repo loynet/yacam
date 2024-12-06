@@ -1,36 +1,28 @@
-import argparse
-import configparser
-import json
+import sys
+from pathlib import Path
 
-from urlextract import URLExtract
-from eval import Threshold, Counter, PostEval
+import yaml
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+import json
+import argparse
 from post import Post
+from eval import from_config, create_post_eval
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate the content file.")
-    parser.add_argument(
-        "type", choices=["post", "string"], help="Type of data to evaluate."
-    )
-    parser.add_argument(
-        "file", type=str, help="Path to a file containing data to evaluate."
-    )
+    parser = argparse.ArgumentParser(description="Evaluate the content of a file containing a post.")
+    parser.add_argument("file", type=str, help="Path to a file")
     args = parser.parse_args()
 
-    config = configparser.ConfigParser()
-    config.read("config.ini")
+    with open("config.yaml", "r") as file:
+        config = yaml.safe_load(file)
+    post_eval = create_post_eval(*from_config(config["detection"]))
 
     with open(args.file, "r") as f:
         data = f.read()
-
-    if args.type == "string":
-        mode_classes = {"threshold": Threshold, "entries": Counter}
-        urls = URLExtract().find_urls(data, only_unique=True)
-        data = "".join(data.replace(url, "") for url in urls)
-        print(mode_classes[config["detection"]["mode"]](config).is_spam(data))
-
-    elif args.type == "post":
-        print(PostEval(config).is_spam(Post.from_raw(json.loads(data))))
+    print(not post_eval(Post.from_raw(json.loads(data))))
 
 
 if __name__ == "__main__":

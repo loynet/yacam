@@ -14,9 +14,7 @@ class Flag:
 
     @classmethod
     def from_raw(cls, flag: dict):
-        return cls(
-            name=flag["name"], code=flag["code"], is_custom=flag.get("custom", False)
-        )
+        return cls(name=flag["name"], code=flag["code"], is_custom=flag.get("custom", False))
 
 
 class Author:
@@ -110,7 +108,7 @@ class Post:
         self.timestamp = timestamp
         self.board = board
         self.post_id = post_id
-        self.is_thread = thread == ""
+        self.is_thread = thread == "" or thread is None
         self.thread_id = thread or post_id
         self.subject = subject
         self.message = message

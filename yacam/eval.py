@@ -1,98 +1,30 @@
-from abc import ABC, abstractmethod
-from configparser import ConfigParser
-from urlextract import URLExtract
+from typing import Callable
 
+# Do not remove these imports, they are used when creating
+# propositions from the config file.
+from propositions import *
 from post import Post
 
-import re
+
+def create_post_eval(
+    rules: list[Proposition],
+    filters: list[Proposition] = None,
+) -> Callable[[Post], bool]:
+    return lambda p: any(f.valid(p) for f in filters or []) or all(r.valid(p) for r in rules)
 
 
-# Ideally this would be an interface, but python isn't go so too bad :(
-class StringEval(ABC):
-    @abstractmethod
-    def is_spam(self, s: str) -> bool:
-        pass
+def from_config(config: dict) -> tuple[list[Proposition], list[Proposition]]:
+    """
+    Create a ruleset and a set of filters from the config .yaml file.
 
+    :param config: The configuration file.
+    :return: A tuple with the rules and filters.
+    """
 
-class Threshold(StringEval):
-    def __init__(self, config: ConfigParser):
-        tokens = (
-            "["
-            + "".join([re.escape(e) for e in config["detection"]["tokens"].split()])
-            + "]"
-        )
-        self.pattern = re.compile(tokens, re.IGNORECASE)
-        self.max = config["detection"].getfloat("max_threshold")
+    # Dynamically load the propositions from the config file.
+    # TODO: Rethink this approach, it is weird and relies to much on the users to not mess up the config file.
+    def as_proposition(entry: dict) -> Proposition:
+        preposition = globals()[entry["name"]](**entry.get("params", {}))
+        return Negate(preposition) if entry.get("negate", False) else preposition
 
-    def is_spam(self, s: str) -> bool:
-        return len(s) > 0 and (len(re.findall(self.pattern, s)) / len(s)) > self.max
-
-
-class Counter(StringEval):
-    def __init__(self, config: ConfigParser):
-        tokens = (
-            "["
-            + "".join([re.escape(e) for e in config["detection"]["tokens"].split()])
-            + "]"
-        )
-        # Compiles the regex for the entry and group of entries
-        e = r"[^\W_]" + tokens
-        self.entry_pattern = re.compile(e, re.IGNORECASE)
-        self.pattern = re.compile(f"(?:{e})+", re.IGNORECASE)
-
-        self.max = config["detection"].getint("max_consecutive_entries")
-
-    def is_spam(self, s: str) -> bool:
-        for found in re.finditer(self.pattern, s):
-            if (
-                len(
-                    re.findall(
-                        self.entry_pattern, found.string[found.start() : found.end()]
-                    )
-                )
-                > self.max
-            ):
-                return True
-        return False
-
-
-class PostEval:
-    def __init__(self, config: ConfigParser):
-        mode = config["detection"]["mode"]
-        if mode == "threshold":
-            self.str_eval: StringEval = Threshold(config)
-        elif mode == "entries":
-            self.str_eval: StringEval = Counter(config)
-        else:
-            raise ValueError('detection mode must be "threshold" or "entries"')
-
-        # Read the whitelist configs, it is optional
-        self.whitelist: list[str] = config.get(
-            "detection", "countries_whitelist", fallback=""
-        ).split()
-
-        self.url_extr: URLExtract = URLExtract()
-
-    def is_spam(self, p: Post) -> bool:
-        # Check if the poster used a capcode, basically if is an admin, mod or part of the global staff
-        if p.has_capcode():
-            return False
-
-        # Check if a post has a messages and files
-        if not p.message or not p.has_files():
-            return False
-
-        # Check if the post is from a whitelisted country
-        if p.has_geo_flag() and p.author.flag.code in self.whitelist:
-            return False
-
-        # 99% of the posts are usually considered not spam at this point
-
-        # Check for urls
-        msg = p.message
-        urls = self.url_extr.find_urls(msg)
-        # No urls = no problem
-        if len(urls) == 0:
-            return False
-
-        return self.str_eval.is_spam("".join(msg.replace(url, "") for url in urls))
+    return [as_proposition(entry) for entry in config["rules"]], [as_proposition(entry) for entry in config["filters"]]

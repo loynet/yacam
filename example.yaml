@@ -1,0 +1,129 @@
+general:
+  # The user agent to use when making requests.
+  user_agent: 'YACAM/1.1'
+
+  # Whether to use the BasedSession (from https://pypi.org/project/basedflare-session/) instead of the requests' session.
+  # This is useful if the site uses the BasedFlare protection since it will automatically solve the challenge.
+  basedflare_session: true
+
+# The moderation configuration.
+# This part of the configuration is a work in progress and may change in the future.
+moderation:
+  # The actions to take when a post is considered spam. For now we only support one action at a time, so
+  # pick DeletePost or DeletePostAndBanAuthor.
+  action:
+    # # Delete the post
+    # name: DeletePost
+
+    # Ban the author
+    - name: DeletePostAndBanAuthor
+      params:
+        # The ban reason (the banned user will see this message)
+        reason: 'Are you spamming?'
+        # The ban duration, follows jschan syntax (e.g. 7d, 1y, 3600s).
+        duration: '1y'
+
+  # The message to log when an action is taken (every user can see this message)
+  log_message: 'Spam detected'
+
+  # Hide the username of the moderator when logging the message
+  hide_username: true
+
+# The spam detection configuration.
+detection:
+  # Any post that passes all the following rules will be considered as a valid post (i.e. not spam)
+  rules:
+    # Calculates the ratio between the tokens and message length (URLs are ignored) and
+    # compares it to the threshold.
+    # If the ratio is less than the threshold, the post is considered valid.
+    - name: MessageHasLessThanThreshold
+      params:
+        # Obfuscation characters. Usually used to hide bad words like b#a*d w*o^r$d
+        tokens:
+          - '*'
+          - '&'
+          - '$'
+          - '#'
+          - '@'
+          - '!'
+          - '?'
+          - '/'
+          - '\'
+          - '|'
+          - '+'
+          - '='
+          - '.'
+          - ':'
+          - ';'
+          - '-'
+          - '_'
+          - '~'
+          - '^'
+          - '"'
+          - '`'
+          - '´'
+          - ','
+        # Maximum ratio between tokens and message length (both URLs and whitespace characters are ignored)
+        max_threshold: 0.4
+
+      # Counts the consecutive entries and compares it against a max value.
+      # An entry is a word character followed by a token.
+      # If the count is less than the max value, the post is considered valid.
+    - name: MessageHasLessThanConsecutiveEntries
+      params:
+        # Obfuscation characters, usually used to hide bad words like b#a*d w*o^r$d.
+        tokens:
+          - '*'
+          - '&'
+          - '$'
+          - '#'
+          - '@'
+          - '!'
+          - '?'
+          - '/'
+          - '\'
+          - '|'
+          - '+'
+          - '='
+          - '.'
+          - ':'
+          - ';'
+          - '-'
+          - '_'
+          - '~'
+          - '^'
+          - '"'
+          - '`'
+          - '´'
+          - ','
+        # Maximum number of consecutive entries
+        max_count: 3
+
+  # Any post that passes one of the following filters will be considered as a valid post (i.e. not spam)
+  filters:
+    # Any post whose author has a capcode will be considered valid.
+    - name: AuthorHasCapcode
+
+    # # Any post whose author has a whitelisted geo flag will be considered valid.
+    # - name: AuthorHasWhitelistedGeoFlag
+    #  params:
+    #    # The country codes to whitelist (as provided by jschan), e.g. 'US', 'CA', 'GB', etc.
+    #    whitelist:
+    #      - 'US'
+    #      - 'CA'
+    #      - 'GB'
+    #
+
+    # Any post without files will be considered valid
+    - name: PostHasFiles
+      negate: true
+
+    # Any post without a message will be considered valid
+    - name: PostHasMessage
+      negate: true
+
+    # Any post with a message that has no URLs will be considered valid
+    - name: MessageHasNOrMoreURLs
+      negate: true
+      params:
+        n: 1

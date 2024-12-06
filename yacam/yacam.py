@@ -1,4 +1,3 @@
-import configparser
 import json
 import logging
 import os
@@ -6,13 +5,13 @@ import sys
 import time
 from datetime import datetime
 
+import yaml
 from basedflare_session import BasedSession
 from dotenv import load_dotenv
 
 from moderator import Moderator, delete, delete_and_ban
 from requests import Session
-from eval import PostEval
-from post import Post
+from eval import create_post_eval, from_config, Post
 
 # Configure logger
 logging.basicConfig(
@@ -42,43 +41,39 @@ def new_moderator(session: Session) -> Moderator:
 
 class Yacam:
     def __init__(self) -> None:
-        # Load configuration file
-        config = configparser.ConfigParser()
-        config.read("config.ini")
+        # Load configuration
+        # TODO: Add proper config validation
+        with open("./config.yaml", "r") as f:
+            config = yaml.safe_load(f)
 
-        session = (
-            BasedSession()
-            if config.getboolean("yacam", "use_basedflare")
-            else Session()
-        )
-        session.headers.update({"User-Agent": config.get("yacam", "user_agent")})
+        # Create a session
+        session = BasedSession() if config["general"].get("basedflare_session", False) else Session()
+        # TODO: Add proper versioning
+        session.headers.update({"User-Agent": config["general"].get("user_agent", "YACAM/1.1")})
+
         self.moderator = new_moderator(session)
 
-        action_type = config.get("moderation", "action")
-        log_message = config.get("moderation", "log_message", fallback="")
-        if action_type == "delete":
-            self.action = lambda post: self.moderator.do(
-                post.board, delete(post.post_id, log_message=log_message)
-            )
+        mod_config = config["moderation"]
+        log_message = mod_config.get("log_message", "")
+        if mod_config.get("action", "delete") == "delete":
+            self.action = lambda post: self.moderator.do(post.board, delete(post.post_id, log_message=log_message))
         else:
-            ban_reason = config.get("moderation", "ban_reason", fallback="")
-            ban_duration = config.get("moderation", "ban_duration", fallback="1y")
             self.action = lambda post: self.moderator.do(
                 post.board,
                 delete_and_ban(
                     post.post_id,
                     log_message=log_message,
-                    ban_reason=ban_reason,
-                    ban_duration=ban_duration,
+                    ban_reason=mod_config.get("ban_reason", ""),
+                    ban_duration=mod_config.get("ban_duration", "1y"),
                 ),
             )
 
-        self.eval = PostEval(config)
+        self.is_valid = create_post_eval(*from_config(config["detection"]))
         logger.info("Initialized")
 
     def on_new_post(self, data: list) -> None:
         post = Post.from_raw(data[0])
-        if self.eval.is_spam(post):
+        if not self.is_valid(post):
             logger.info("Found spam")
             self.action(post)
             with open(f'{data[0]["_id"]}.json', "w") as f:

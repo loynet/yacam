@@ -59,9 +59,7 @@ def delete_and_ban(
 
 class Moderator:
 
-    def __init__(
-        self, session: Session, url: str, username: str, password: str
-    ) -> None:
+    def __init__(self, session: Session, url: str, username: str, password: str) -> None:
         self.session = session
         self.auth_params = {
             "username": username,
